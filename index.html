@@ -1,0 +1,138 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#10251b">
+<title>WildDex</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1711;--panel:#14271c;--panel2:#1c3425;--green:#9bd6a6;--text:#edf5ee;--muted:#a5b8a9;--border:#304737}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
+header{padding:25px 5%;background:#10251b;border-bottom:1px solid var(--border)}
+.brand{font-size:29px;font-weight:800;letter-spacing:-1px;color:var(--green)}
+header p{color:var(--muted);margin:5px 0 0}
+main{max-width:1100px;margin:auto;padding:24px 5% 50px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
+.stat,.panel,.animal{background:var(--panel);border:1px solid var(--border);border-radius:14px}
+.stat{padding:16px}.stat strong{display:block;font-size:25px;color:var(--green)}.stat span{font-size:12px;color:var(--muted)}
+h2{font-size:20px;margin:25px 0 12px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}
+input,select,button{font:inherit;border-radius:9px;border:1px solid var(--border);padding:11px;background:var(--panel);color:var(--text)}
+input{flex:1;min-width:180px}
+button{cursor:pointer}button:hover{border-color:var(--green)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 20px}
+.filters button.active,.primary{background:var(--green);color:#10251b;border-color:var(--green);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.animal{padding:16px;min-width:0}
+.animal .emoji{font-size:32px}
+.animal h3{margin:8px 0 3px;font-size:17px}
+.animal p{margin:3px 0;color:var(--muted);font-size:13px}
+.animal button{width:100%;margin-top:13px}
+.animal button.seen{background:#23462e;border-color:#497e55;color:#c6f1cd}
+.progress{height:7px;background:var(--panel2);border-radius:8px;overflow:hidden;margin-top:12px}
+.progress div{height:100%;background:var(--green);width:0}
+.panel{padding:16px;margin-top:20px}
+.muted{color:var(--muted);font-size:13px}
+footer{padding:20px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:500px){.stats{gap:7px}.stat{padding:11px}.stat strong{font-size:21px}.stat span{font-size:11px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">🌿 WildDex</div>
+  <p>Your personal record of wildlife discoveries.</p>
+</header>
+<main>
+  <section class="stats">
+    <div class="stat"><strong id="seenCount">0</strong><span>Species seen</span></div>
+    <div class="stat"><strong id="totalCount">0</strong><span>Sample species</span></div>
+    <div class="stat"><strong id="percent">0%</strong><span>Collection progress</span></div>
+  </section>
+
+  <h2>Explore wildlife</h2>
+  <div class="controls">
+    <input id="search" placeholder="Search common or scientific name..." aria-label="Search species">
+    <select id="status">
+      <option value="all">All species</option>
+      <option value="seen">Seen by me</option>
+      <option value="unseen">Not seen yet</option>
+    </select>
+  </div>
+  <div class="filters" id="filters"></div>
+  <div class="grid" id="species"></div>
+
+  <section class="panel">
+    <h2 style="margin-top:0">Your wildlife journey</h2>
+    <div class="progress"><div id="progressBar"></div></div>
+    <p class="muted" id="progressText">Mark a species as seen to begin your collection.</p>
+    <p class="muted">Your collection is saved in this browser on this device. This early version uses sample species; it is not yet a complete worldwide catalog.</p>
+  </section>
+</main>
+<footer>WildDex · Discover. Document. Remember.</footer>
+<script>
+const groups = ["All","Mammals","Birds","Reptiles","Amphibians","Fish","Invertebrates"];
+const samples = [
+["Gray wolf","Canis lupus","Mammals","🐺"],
+["Red fox","Vulpes vulpes","Mammals","🦊"],
+["White-tailed deer","Odocoileus virginianus","Mammals","🦌"],
+["North American beaver","Castor canadensis","Mammals","🦫"],
+["Raccoon","Procyon lotor","Mammals","🦝"],
+["Bald eagle","Haliaeetus leucocephalus","Birds","🦅"],
+["American robin","Turdus migratorius","Birds","🐦"],
+["Mallard","Anas platyrhynchos","Birds","🦆"],
+["Wild turkey","Meleagris gallopavo","Birds","🦃"],
+["Painted turtle","Chrysemys picta","Reptiles","🐢"],
+["Common garter snake","Thamnophis sirtalis","Reptiles","🐍"],
+["Eastern massasauga","Sistrurus catenatus","Reptiles","🐍"],
+["American bullfrog","Lithobates catesbeianus","Amphibians","🐸"],
+["Spring peeper","Pseudacris crucifer","Amphibians","🐸"],
+["Bluegill","Lepomis macrochirus","Fish","🐟"],
+["Yellow perch","Perca flavescens","Fish","🐟"],
+["Monarch butterfly","Danaus plexippus","Invertebrates","🦋"],
+["Black widow spider","Latrodectus mactans","Invertebrates","🕷️"],
+["Seven-spotted lady beetle","Coccinella septempunctata","Invertebrates","🐞"],
+["Common earthworm","Lumbricus terrestris","Invertebrates","🪱"]
+].map((s,i)=>({id:i,name:s[0],scientific:s[1],group:s[2],emoji:s[3]}));
+let activeGroup="All";
+let seen=new Set();
+try{seen=new Set(JSON.parse(localStorage.getItem("wilddex-seen")||"[]"))}catch(e){}
+const filters=document.getElementById("filters");
+groups.forEach(g=>{
+ const b=document.createElement("button");b.textContent=g;
+ if(g==="All")b.classList.add("active");
+ b.onclick=()=>{activeGroup=g;filters.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x.textContent===g));render()};
+ filters.appendChild(b);
+});
+function render(){
+ const q=document.getElementById("search").value.toLowerCase();
+ const status=document.getElementById("status").value;
+ const shown=samples.filter(s=>(activeGroup==="All"||s.group===activeGroup)&&
+ (s.name.toLowerCase().includes(q)||s.scientific.toLowerCase().includes(q))&&
+ (status==="all"||(status==="seen"&&seen.has(s.id))||(status==="unseen"&&!seen.has(s.id))));
+ const area=document.getElementById("species");area.innerHTML="";
+ if(!shown.length){area.innerHTML='<p class="muted">No species match your search.</p>'}
+ shown.forEach(s=>{
+  const card=document.createElement("article");card.className="animal";
+  const icon=document.createElement("div");icon.className="emoji";icon.textContent=s.emoji;
+  const name=document.createElement("h3");name.textContent=s.name;
+  const sci=document.createElement("p");sci.textContent=s.scientific;
+  const group=document.createElement("p");group.textContent=s.group;
+  const btn=document.createElement("button");btn.textContent=seen.has(s.id)?"✓ Seen":"＋ Mark as seen";btn.className=seen.has(s.id)?"seen":"";
+  btn.onclick=()=>{if(seen.has(s.id))seen.delete(s.id);else seen.add(s.id);try{localStorage.setItem("wilddex-seen",JSON.stringify([...seen]))}catch(e){}render()};
+  card.append(icon,name,sci,group,btn);area.appendChild(card);
+ });
+ const count=seen.size;const pct=Math.round(count/samples.length*100);
+ document.getElementById("seenCount").textContent=count;
+ document.getElementById("totalCount").textContent=samples.length;
+ document.getElementById("percent").textContent=pct+"%";
+ document.getElementById("progressBar").style.width=pct+"%";
+ document.getElementById("progressText").textContent=count?`You've recorded ${count} of ${samples.length} sample species.`:"Mark a species as seen to begin your collection.";
+}
+document.getElementById("search").addEventListener("input",render);
+document.getElementById("status").addEventListener("change",render);
+render();
+</script>
+</body>
+</html>

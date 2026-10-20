@@ -128,27 +128,62 @@ function render(){
  document.getElementById("progressBar").style.width=Math.min(pct,100)+"%";
  document.getElementById("progressText").textContent=count?`You've recorded ${count} species. Progress is currently calculated against the ${samples.length} starter species.`:"Mark a species as seen to begin your collection.";
 }
+
 async function searchGBIF(){
  const q=document.getElementById("search").value.trim();
  const message=document.getElementById("message");
- if(!q){message.textContent="Enter a common or scientific name in the search box first.";return}
+ if(!q){message.textContent="Enter a common or scientific name first.";return}
  message.textContent="Searching GBIF…";
  document.getElementById("gbifSearch").disabled=true;
  try{
-  const url="https://api.gbif.org/v1/species/search?q="+encodeURIComponent(q)+"&rank=SPECIES&status=ACCEPTED&limit=50";
+  const url="https://api.gbif.org/v1/species/search?q="+encodeURIComponent(q)+"&rank=SPECIES&status=ACCEPTED&limit=100";
   const response=await fetch(url,{headers:{"Accept":"application/json"}});
-  if(!response.ok)throw new Error("GBIF returned an error.");
+  if(!response.ok)throw new Error("GBIF request failed");
   const data=await response.json();
-  results=(data.results||[]).filter(x=>x.scientificName).map(x=>{
+  const unique=new Map();
+
+  for(const x of (data.results||[])){
+   if(!x.scientificName||!x.key)continue;
+
+   const scientific=(x.canonicalName||x.scientificName).trim();
+   const common=(x.vernacularName||"").trim();
+   const exactScientific=scientific.toLowerCase()===q.toLowerCase();
+   const exactCommon=common.toLowerCase()===q.toLowerCase();
+   const nameMatches=scientific.toLowerCase().includes(q.toLowerCase())||
+                     common.toLowerCase().includes(q.toLowerCase());
+   // For multiword searches, discard results that match neither name.
+   if(q.includes(" ")&&!nameMatches)continue;
+
    const group=guessGroup(x.class||x.kingdom);
-   const common=x.vernacularName||x.canonicalName||x.scientificName;
-   return {id:"gbif-"+x.key,name:common,scientific:x.canonicalName||x.scientificName,group,emoji:groupEmoji[group]||"🌿",source:"gbif"};
-  });
+   const item={
+    id:"gbif-"+x.key,
+    name:common||scientific,
+    scientific,
+    group:group==="Other"?guessGroup(x.class):group,
+    emoji:groupEmoji[group]||"🌿",
+    source:"gbif",
+    score:(exactCommon?4:0)+(exactScientific?3:0)+(nameMatches?1:0)
+   };
+
+   const old=unique.get(item.id);
+   if(!old||item.score>old.score)unique.set(item.id,item);
+  }
+
+  results=[...unique.values()].sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
   mode="gbif";
-  message.textContent=results.length?`Found ${results.length} GBIF results for “${q}”. This is a search result, not a complete worldwide checklist.`:"No accepted species matched that search. Try a different name.";
+  activeGroup="All";
+  filters.querySelectorAll("button").forEach(b=>b.classList.toggle("active",b.textContent==="All"));
+  document.getElementById("status").value="all";
+
+  message.textContent=results.length
+   ?`Found ${results.length} unique, relevant GBIF species for “${q}”.`
+   :"No relevant species found. Try a scientific name or a shorter search.";
   render();
- }catch(e){message.textContent="Couldn't reach GBIF. Check your connection and try again. The starter species are still available."; }
- finally{document.getElementById("gbifSearch").disabled=false}
+ }catch(e){
+  message.textContent="Couldn't reach GBIF. Check your connection and try again.";
+ }finally{
+  document.getElementById("gbifSearch").disabled=false;
+ }
 }
 document.getElementById("gbifSearch").addEventListener("click",searchGBIF);
 document.getElementById("search").addEventListener("keydown",e=>{if(e.key==="Enter")searchGBIF()});

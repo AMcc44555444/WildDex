@@ -107,7 +107,7 @@ function guessGroup(t){
 function render(){
  const q=document.getElementById("search").value.toLowerCase(),status=document.getElementById("status").value;
  const shown=results.filter(s=>(activeGroup==="All"||s.group===activeGroup||activeGroup==="All")&&
- (!q||s.name.toLowerCase().includes(q)||s.scientific.toLowerCase().includes(q))&&
+ (mode==="gbif"||!q||s.name.toLowerCase().includes(q)||s.scientific.toLowerCase().includes(q))&&
  (status==="all"||(status==="seen"&&seen.has(s.id))||(status==="unseen"&&!seen.has(s.id))));
  const area=document.getElementById("species");area.innerHTML="";
  if(!shown.length){area.innerHTML='<p class="muted">No species match. Try another search or animal group.</p>'}

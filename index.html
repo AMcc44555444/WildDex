@@ -28,7 +28,7 @@ button{cursor:pointer}button:hover{border-color:var(--green)}
 .animal{padding:16px;min-width:0}
 .animal .emoji{font-size:32px}
 .animal h3{margin:8px 0 3px;font-size:17px}
-.animal p{margin:3px 0;color:var(--muted);font-size:13px}
+.animal p{margin:3px 0;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
 .animal button{width:100%;margin-top:13px}
 .animal button.seen{background:#23462e;border-color:#497e55;color:#c6f1cd}
 .progress{height:7px;background:var(--panel2);border-radius:8px;overflow:hidden;margin-top:12px}
@@ -48,7 +48,7 @@ footer{padding:20px;text-align:center;color:var(--muted);font-size:12px}
   <section class="stats">
     <div class="stat"><strong id="seenCount">0</strong><span>Species seen</span></div>
     <div class="stat"><strong id="totalCount">0</strong><span>Sample species</span></div>
-    <div class="stat"><strong id="percent">0%</strong><span>Collection progress</span></div>
+    <div class="stat"><strong id="percent">0%</strong><span>Sample progress</span></div>
   </section>
 
   <h2>Explore wildlife</h2>
@@ -61,76 +61,98 @@ footer{padding:20px;text-align:center;color:var(--muted);font-size:12px}
     </select>
   </div>
   <div class="filters" id="filters"></div>
+  <div class="controls">
+    <button id="gbifSearch" class="primary">Search live GBIF catalog</button>
+  </div>
+  <p class="muted" id="message">Browse the sample species or search GBIF for real species records.</p>
   <div class="grid" id="species"></div>
 
   <section class="panel">
     <h2 style="margin-top:0">Your wildlife journey</h2>
     <div class="progress"><div id="progressBar"></div></div>
     <p class="muted" id="progressText">Mark a species as seen to begin your collection.</p>
-    <p class="muted">Your collection is saved in this browser on this device. This early version uses sample species; it is not yet a complete worldwide catalog.</p>
+    <p class="muted">Seen records are saved in this browser on this device. GBIF provides a large global catalog, but search results are not a complete checklist of every species.</p>
   </section>
 </main>
-<footer>WildDex · Discover. Document. Remember.</footer>
+<footer>WildDex · Discover. Document. Remember. · Species data: GBIF</footer>
 <script>
-const groups = ["All","Mammals","Birds","Reptiles","Amphibians","Fish","Invertebrates"];
-const samples = [
-["Gray wolf","Canis lupus","Mammals","🐺"],
-["Red fox","Vulpes vulpes","Mammals","🦊"],
-["White-tailed deer","Odocoileus virginianus","Mammals","🦌"],
-["North American beaver","Castor canadensis","Mammals","🦫"],
-["Raccoon","Procyon lotor","Mammals","🦝"],
-["Bald eagle","Haliaeetus leucocephalus","Birds","🦅"],
-["American robin","Turdus migratorius","Birds","🐦"],
-["Mallard","Anas platyrhynchos","Birds","🦆"],
-["Wild turkey","Meleagris gallopavo","Birds","🦃"],
-["Painted turtle","Chrysemys picta","Reptiles","🐢"],
-["Common garter snake","Thamnophis sirtalis","Reptiles","🐍"],
-["Eastern massasauga","Sistrurus catenatus","Reptiles","🐍"],
-["American bullfrog","Lithobates catesbeianus","Amphibians","🐸"],
-["Spring peeper","Pseudacris crucifer","Amphibians","🐸"],
-["Bluegill","Lepomis macrochirus","Fish","🐟"],
-["Yellow perch","Perca flavescens","Fish","🐟"],
-["Monarch butterfly","Danaus plexippus","Invertebrates","🦋"],
-["Black widow spider","Latrodectus mactans","Invertebrates","🕷️"],
-["Seven-spotted lady beetle","Coccinella septempunctata","Invertebrates","🐞"],
-["Common earthworm","Lumbricus terrestris","Invertebrates","🪱"]
-].map((s,i)=>({id:i,name:s[0],scientific:s[1],group:s[2],emoji:s[3]}));
-let activeGroup="All";
-let seen=new Set();
+const groups=["All","Mammals","Birds","Reptiles","Amphibians","Fish","Invertebrates"];
+const groupEmoji={Mammals:"🐾",Birds:"🐦",Reptiles:"🐍",Amphibians:"🐸",Fish:"🐟",Invertebrates:"🦋",Other:"🌿"};
+const samples=[
+["Gray wolf","Canis lupus","Mammals"],["Red fox","Vulpes vulpes","Mammals"],
+["White-tailed deer","Odocoileus virginianus","Mammals"],["North American beaver","Castor canadensis","Mammals"],
+["Raccoon","Procyon lotor","Mammals"],["Bald eagle","Haliaeetus leucocephalus","Birds"],
+["American robin","Turdus migratorius","Birds"],["Mallard","Anas platyrhynchos","Birds"],
+["Wild turkey","Meleagris gallopavo","Birds"],["Painted turtle","Chrysemys picta","Reptiles"],
+["Common garter snake","Thamnophis sirtalis","Reptiles"],["Eastern massasauga","Sistrurus catenatus","Reptiles"],
+["American bullfrog","Lithobates catesbeianus","Amphibians"],["Spring peeper","Pseudacris crucifer","Amphibians"],
+["Bluegill","Lepomis macrochirus","Fish"],["Yellow perch","Perca flavescens","Fish"],
+["Monarch butterfly","Danaus plexippus","Invertebrates"],["Black widow spider","Latrodectus mactans","Invertebrates"],
+["Seven-spotted lady beetle","Coccinella septempunctata","Invertebrates"],["Common earthworm","Lumbricus terrestris","Invertebrates"]
+].map((s,i)=>({id:"sample-"+i,name:s[0],scientific:s[1],group:s[2],emoji:groupEmoji[s[2]],source:"sample"}));
+let activeGroup="All",mode="sample",results=samples,seen=new Set();
 try{seen=new Set(JSON.parse(localStorage.getItem("wilddex-seen")||"[]"))}catch(e){}
 const filters=document.getElementById("filters");
-groups.forEach(g=>{
- const b=document.createElement("button");b.textContent=g;
- if(g==="All")b.classList.add("active");
- b.onclick=()=>{activeGroup=g;filters.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x.textContent===g));render()};
- filters.appendChild(b);
-});
+groups.forEach(g=>{const b=document.createElement("button");b.textContent=g;if(g==="All")b.classList.add("active");b.onclick=()=>{activeGroup=g;filters.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x.textContent===g));render()};filters.appendChild(b)});
+function guessGroup(t){
+ const s=(t||"").toLowerCase();
+ if(["mammalia"].includes(s))return "Mammals";
+ if(["aves"].includes(s))return "Birds";
+ if(["reptilia"].includes(s))return "Reptiles";
+ if(["amphibia"].includes(s))return "Amphibians";
+ if(["actinopterygii","chondrichthyes","myxini","petromyzonti","sarcopterygii"].includes(s))return "Fish";
+ if(["insecta","arachnida","mollusca","crustacea","annelida","cnidaria","echinodermata","porifera","myriapoda"].includes(s))return "Invertebrates";
+ return "Other";
+}
 function render(){
- const q=document.getElementById("search").value.toLowerCase();
- const status=document.getElementById("status").value;
- const shown=samples.filter(s=>(activeGroup==="All"||s.group===activeGroup)&&
- (s.name.toLowerCase().includes(q)||s.scientific.toLowerCase().includes(q))&&
+ const q=document.getElementById("search").value.toLowerCase(),status=document.getElementById("status").value;
+ const shown=results.filter(s=>(activeGroup==="All"||s.group===activeGroup||s.group==="Other"&&activeGroup==="Invertebrates")&&
+ (!q||s.name.toLowerCase().includes(q)||s.scientific.toLowerCase().includes(q))&&
  (status==="all"||(status==="seen"&&seen.has(s.id))||(status==="unseen"&&!seen.has(s.id))));
  const area=document.getElementById("species");area.innerHTML="";
- if(!shown.length){area.innerHTML='<p class="muted">No species match your search.</p>'}
+ if(!shown.length){area.innerHTML='<p class="muted">No species match. Try another search or animal group.</p>'}
  shown.forEach(s=>{
   const card=document.createElement("article");card.className="animal";
-  const icon=document.createElement("div");icon.className="emoji";icon.textContent=s.emoji;
+  const icon=document.createElement("div");icon.className="emoji";icon.textContent=s.emoji||"🌿";
   const name=document.createElement("h3");name.textContent=s.name;
-  const sci=document.createElement("p");sci.textContent=s.scientific;
-  const group=document.createElement("p");group.textContent=s.group;
+  const sci=document.createElement("p");sci.textContent=s.scientific||"Scientific name unavailable";
+  const group=document.createElement("p");group.textContent=s.group+(s.source==="gbif"?" · GBIF":"");
   const btn=document.createElement("button");btn.textContent=seen.has(s.id)?"✓ Seen":"＋ Mark as seen";btn.className=seen.has(s.id)?"seen":"";
   btn.onclick=()=>{if(seen.has(s.id))seen.delete(s.id);else seen.add(s.id);try{localStorage.setItem("wilddex-seen",JSON.stringify([...seen]))}catch(e){}render()};
   card.append(icon,name,sci,group,btn);area.appendChild(card);
  });
- const count=seen.size;const pct=Math.round(count/samples.length*100);
+ const count=seen.size,pct=Math.round(count/samples.length*100);
  document.getElementById("seenCount").textContent=count;
  document.getElementById("totalCount").textContent=samples.length;
  document.getElementById("percent").textContent=pct+"%";
- document.getElementById("progressBar").style.width=pct+"%";
- document.getElementById("progressText").textContent=count?`You've recorded ${count} of ${samples.length} sample species.`:"Mark a species as seen to begin your collection.";
+ document.getElementById("progressBar").style.width=Math.min(pct,100)+"%";
+ document.getElementById("progressText").textContent=count?`You've recorded ${count} species. Progress is currently calculated against the ${samples.length} starter species.`:"Mark a species as seen to begin your collection.";
 }
-document.getElementById("search").addEventListener("input",render);
+async function searchGBIF(){
+ const q=document.getElementById("search").value.trim();
+ const message=document.getElementById("message");
+ if(!q){message.textContent="Enter a common or scientific name in the search box first.";return}
+ message.textContent="Searching GBIF…";
+ document.getElementById("gbifSearch").disabled=true;
+ try{
+  const url="https://api.gbif.org/v1/species/search?q="+encodeURIComponent(q)+"&rank=SPECIES&status=ACCEPTED&limit=50";
+  const response=await fetch(url,{headers:{"Accept":"application/json"}});
+  if(!response.ok)throw new Error("GBIF returned an error.");
+  const data=await response.json();
+  results=(data.results||[]).filter(x=>x.scientificName).map(x=>{
+   const group=guessGroup(x.class||x.kingdom);
+   const common=x.vernacularName||x.canonicalName||x.scientificName;
+   return {id:"gbif-"+x.key,name:common,scientific:x.canonicalName||x.scientificName,group,emoji:groupEmoji[group]||"🌿",source:"gbif"};
+  });
+  mode="gbif";
+  message.textContent=results.length?`Found ${results.length} GBIF results for “${q}”. This is a search result, not a complete worldwide checklist.`:"No accepted species matched that search. Try a different name.";
+  render();
+ }catch(e){message.textContent="Couldn't reach GBIF. Check your connection and try again. The starter species are still available."; }
+ finally{document.getElementById("gbifSearch").disabled=false}
+}
+document.getElementById("gbifSearch").addEventListener("click",searchGBIF);
+document.getElementById("search").addEventListener("keydown",e=>{if(e.key==="Enter")searchGBIF()});
+document.getElementById("search").addEventListener("input",()=>{if(mode==="sample")render()});
 document.getElementById("status").addEventListener("change",render);
 render();
 </script>

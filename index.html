@@ -128,9 +128,11 @@ function render(){
  document.getElementById("progressBar").style.width=Math.min(pct,100)+"%";
  document.getElementById("progressText").textContent=count?`You've recorded ${count} species. Progress is currently calculated against the ${samples.length} starter species.`:"Mark a species as seen to begin your collection.";
 }
+
 async function searchGBIF(){
  const q=document.getElementById("search").value.trim();
  const message=document.getElementById("message");
+ const button=document.getElementById("gbifSearch");
 
  if(!q){
   message.textContent="Enter a common or scientific name first.";
@@ -138,32 +140,46 @@ async function searchGBIF(){
  }
 
  message.textContent="Searching GBIF…";
- document.getElementById("gbifSearch").disabled=true;
+ button.disabled=true;
 
  try{
   const url="https://api.gbif.org/v1/species/search?q="+
-   encodeURIComponent(q)+"&rank=SPECIES&status=ACCEPTED&limit=100";
+   encodeURIComponent(q)+
+   "&rank=SPECIES&status=ACCEPTED&highertaxonKey=1&limit=100";
 
   const response=await fetch(url);
   if(!response.ok)throw new Error("GBIF request failed");
 
   const data=await response.json();
   const unique=new Map();
+  const normalize=s=>(s||"").trim().toLowerCase();
 
-  for(const x of (data.results||[])){
-   if(!x.scientificName||!x.key)continue;
+  const matches=(data.results||[]).filter(x=>{
+   if(!x.key||!x.scientificName)return false;
+   if(x.rank!=="SPECIES"||x.status!=="ACCEPTED")return false;
+   if(x.kingdom&&x.kingdom!=="Animalia")return false;
 
+   const name=normalize(x.vernacularName);
+   const scientific=normalize(x.canonicalName||x.scientificName);
+   const query=normalize(q);
+
+   return name===query||scientific===query||
+    scientific.startsWith(query+" ");
+  });
+
+  for(const x of matches){
    const scientific=(x.canonicalName||x.scientificName).trim();
    const id="gbif-"+x.key;
 
    if(unique.has(id))continue;
 
    const group=guessGroup(x.class||"");
+
    unique.set(id,{
     id:id,
     name:x.vernacularName||scientific,
     scientific:scientific,
-    group:group==="Other"?"Other":group,
+    group:group,
     emoji:groupEmoji[group]||"🌿",
     source:"gbif"
    });
@@ -180,15 +196,16 @@ async function searchGBIF(){
   document.getElementById("status").value="all";
 
   message.textContent=results.length
-   ? "Loaded "+results.length+" GBIF species. Some names may be broader matches."
-   : "GBIF returned no species. Try another search.";
+   ? "Found "+results.length+" matching animal species."
+   : "No exact species matches found. Try another name.";
 
   render();
 
  }catch(error){
+  console.error("WildDex GBIF search error:",error);
   message.textContent="Couldn't reach GBIF. Check your connection and try again.";
  }finally{
-  document.getElementById("gbifSearch").disabled=false;
+  button.disabled=false;
  }
 }
 document.getElementById("gbifSearch").addEventListener("click",searchGBIF);

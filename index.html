@@ -145,7 +145,7 @@ async function searchGBIF(){
  try{
   const url="https://api.gbif.org/v1/species/search?q="+
    encodeURIComponent(q)+
-   "&rank=SPECIES&status=ACCEPTED&highertaxonKey=1&limit=100";
+   "&rank=SPECIES&status=ACCEPTED&limit=100";
 
   const response=await fetch(url);
   if(!response.ok)throw new Error("GBIF request failed");
@@ -163,8 +163,8 @@ async function searchGBIF(){
    const scientific=normalize(x.canonicalName||x.scientificName);
    const query=normalize(q);
 
-   return name===query||scientific===query||
-    scientific.startsWith(query+" ");
+   return name.includes(query)||
+    scientific.includes(query);
   });
 
   for(const x of matches){

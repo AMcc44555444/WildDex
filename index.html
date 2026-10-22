@@ -156,7 +156,8 @@ async function searchGBIF(){
 
   const matches=(data.results||[]).filter(x=>{
    if(!x.key||!x.scientificName)return false;
-   if(x.rank!=="SPECIES"||x.status!=="ACCEPTED")return false;
+   if(String(x.rank || "").toUpperCase()!=="SPECIES")return false;
+if(String(x.taxonomicStatus || x.status || "").toUpperCase()!=="ACCEPTED")return false;
    if(x.kingdom&&x.kingdom!=="Animalia")return false;
 
    const name=normalize(x.vernacularName);

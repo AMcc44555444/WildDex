@@ -10,7 +10,8 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
 header{padding:25px 5%;background:#10251b;border-bottom:1px solid var(--border)}
-.brand{font-size:29px;font-weight:800;letter-spacing:-1px;color:var(--green)}
+.brand{display:flex;align-items:center;gap:12px;font-size:29px;font-weight:800;letter-spacing:-1px;color:var(--green)}
+.brand img{width:48px;height:48px;object-fit:contain;border-radius:10px}
 header p{color:var(--muted);margin:5px 0 0}
 main{max-width:1100px;margin:auto;padding:24px 5% 50px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
@@ -40,7 +41,10 @@ footer{padding:20px;text-align:center;color:var(--muted);font-size:12px}
 </head>
 <body>
 <header>
-  <div class="brand">🌿 WildDex</div>
+  <div class="brand">
+  <img src="wilddex-logo.png" alt="WildDex logo">
+  WildDex
+</div>
   <p>Your personal record of wildlife discoveries.</p>
 </header>
 <main>

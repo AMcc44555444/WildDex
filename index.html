@@ -15,6 +15,8 @@
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
 header{padding:25px 5%;background:#10251b;border-bottom:1px solid var(--border)}
 .brand{display:flex;align-items:center;gap:12px;font-size:29px;font-weight:800;letter-spacing:-1px;color:var(--green)}
+.brand-title{line-height:1.1}
+.brand-subtitle{margin-top:5px;font-size:10px;letter-spacing:2px;color:var(--muted)}
 .brand img{width:48px;height:48px;object-fit:contain;border-radius:10px}
 header p{color:var(--muted);margin:5px 0 0}
 main{max-width:1100px;margin:auto;padding:24px 5% 50px}
@@ -44,19 +46,39 @@ footer{padding:20px;text-align:center;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
+
 <header>
   <div class="brand">
-  <img src="wilddex-logo.png" alt="WildDex logo">
-  WildDex
-</div>
+    <img src="wilddex-logo.png" alt="WildDex logo">
+    <div>
+      <div class="brand-title">WildDex</div>
+      <div class="brand-subtitle">WILDLIFE DISCOVERY INDEX</div>
+    </div>
+  </div>
   <p>Your personal record of wildlife discoveries.</p>
 </header>
+
 <main>
   <section class="stats">
-    <div class="stat"><strong id="seenCount">0</strong><span>Species seen</span></div>
-    <div class="stat"><strong id="totalCount">0</strong><span>Sample species</span></div>
-    <div class="stat"><strong id="percent">0%</strong><span>Sample progress</span></div>
+    <div class="stat">
+      <span>SPECIES DISCOVERED</span>
+      <strong id="seenCount">0</strong>
+      <div class="stat-note">Your wildlife collection</div>
+    </div>
+    <div class="stat">
+      <span>SPECIES INDEXED</span>
+      <strong id="totalCount">0</strong>
+      <div class="stat-note">Currently in WildDex</div>
+    </div>
+    <div class="stat">
+      <span>COLLECTION COMPLETE</span>
+      <strong id="percent">0%</strong>
+      <div class="progress">
+        <div id="overallProgress"></div>
+      </div>
+    </div>
   </section>
+
 
   <h2>Explore wildlife</h2>
   <div class="controls">

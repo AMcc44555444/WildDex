@@ -1,0 +1,17 @@
+
+{
+  "name": "WildDex",
+  "short_name": "WildDex",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b1711",
+  "theme_color": "#10251b",
+  "icons": [
+    {
+      "src": "wilddex-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

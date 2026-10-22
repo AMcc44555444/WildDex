@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -93,7 +92,7 @@ const samples=[
 let activeGroup="All",mode="sample",results=samples,seen=new Set();
 try{seen=new Set(JSON.parse(localStorage.getItem("wilddex-seen")||"[]"))}catch(e){}
 const filters=document.getElementById("filters");
-groups.forEach(g=>{const b=document.createElement("button");b.textContent=g;if(g==="All")b.classList.add("active");b.onclick=()=>{activeGroup=g;filters.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x.textContent===g));render()};filters.appendChild(b)});
+groups.forEach(g=>{const b=document.createElement("button");b.textContent=g;if(g==="All")b.classList.add("active");b.onclick=()=>{activeGroup=g;filters.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));render()};filters.appendChild(b)});
 function guessGroup(t){
  const s=(t||"").toLowerCase();
  if(["mammalia"].includes(s))return "Mammals";
@@ -151,6 +150,20 @@ async function searchGBIF(){
   if(!response.ok)throw new Error("GBIF request failed");
 
   const data=await response.json();
+  console.log("GBIF total results:", Array.isArray(data.results) ? data.results.length : 0);
+  console.log("GBIF first 5 results:", (data.results || []).slice(0,5).map(item=>({
+   key:item.key,
+   scientificName:item.scientificName,
+   canonicalName:item.canonicalName,
+   vernacularName:item.vernacularName,
+   rank:item.rank,
+   taxonRank:item.taxonRank,
+   status:item.status,
+   taxonomicStatus:item.taxonomicStatus,
+   kingdom:item.kingdom,
+   class:item.class
+  })));
+
   const unique=new Map();
   const normalize=s=>(s||"").trim().toLowerCase();
 

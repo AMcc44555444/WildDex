@@ -154,7 +154,8 @@ function render(){
  document.getElementById("seenCount").textContent=count;
  document.getElementById("totalCount").textContent=samples.length;
  document.getElementById("percent").textContent=pct+"%";
- document.getElementById("progressBar").style.width=Math.min(pct,100)+"%";
+ const bar=document.getElementById("overallProgress");
+if(bar) bar.style.width=Math.min(pct,100)+"%";
  document.getElementById("progressText").textContent=count?`You've recorded ${count} species. Progress is currently calculated against the ${samples.length} starter species.`:"Mark a species as seen to begin your collection.";
 }
 
